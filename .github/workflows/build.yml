@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * *"
+
+concurrency:
+  group: build-${{ format('{0}-{1}', github.head_ref || github.run_number, github.job) }}
+  cancel-in-progress: true
+
+env:
+  BUILDKIT_PROGRESS: plain
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby_version: [3.3.3, 3.2.4]
+        debian_release: [bookworm, bullseye]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: build docker image
+        run: |
+          docker buildx build --platform=linux/amd64 -t discourse/ruby:${{ matrix.ruby_version }}-${{ matrix.debian_release }}-slim --build-arg DEBIAN_RELEASE=${{ matrix.debian_release }} --build-arg RUBY_VERSION=${{ matrix.ruby_version }} .
+
+      - name: push to dockerhub
+        if: success() && (github.ref == 'refs/heads/main')
+        env:
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          docker login --username discoursebuild --password $DOCKERHUB_PASSWORD
+          ruby_version_major_minor=$(echo ${{ matrix.ruby_version }} | cut -d. -f1,2)
+          docker buildx build --push --platform=linux/amd64,linux/arm64 -t discourse/ruby:${ruby_version_major_minor}-${{ matrix.debian_release }}-slim -t discourse/ruby:${{ matrix.ruby_version }}-${{ matrix.debian_release }}-slim --build-arg DEBIAN_RELEASE=${{ matrix.debian_release }} --build-arg RUBY_VERSION=${{ matrix.ruby_version }} .
