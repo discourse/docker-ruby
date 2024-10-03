@@ -5,13 +5,21 @@
 ARG DEBIAN_RELEASE=
 ARG RUBY_VERSION=
 
-FROM debian:${DEBIAN_RELEASE}-slim
+FROM debian:${DEBIAN_RELEASE}-slim AS ruby_base
 
 ARG RUBY_VERSION
 
 ENV RUBY_VERSION=${RUBY_VERSION}
+# skip installing gem documentation
+RUN mkdir -p /usr/local/etc; \
+  { \
+    echo 'install: --no-document'; \
+    echo 'update: --no-document'; \
+  } >> /usr/local/etc/gemrc;
 
-# Installs system dependencies required to run Ruby
+FROM ruby_base AS builder
+
+# Installs system dependencies required to build Ruby
 RUN set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
@@ -21,16 +29,10 @@ RUN set -eux; \
     libssl-dev \
     libyaml-dev \
     procps \
-    zlib1g-dev \
-    ; \
-  # skip installing gem documentation
-  mkdir -p /usr/local/etc; \
-  { \
-    echo 'install: --no-document'; \
-    echo 'update: --no-document'; \
-  } >> /usr/local/etc/gemrc; \
+    zlib1g-dev
+
   # Installs the dependencies required to build Ruby
-  savedAptMark="$(apt-mark showmanual)"; \
+RUN savedAptMark="$(apt-mark showmanual)"; \
   apt-get install -y --no-install-recommends \
     git \
     dpkg-dev \
@@ -73,22 +75,12 @@ RUN set -eux; \
   cd / && rm -fr /src; \
   export RUSTUP_HOME='/tmp/rust/rustup' CARGO_HOME='/tmp/rust/cargo';\
   export PATH="$CARGO_HOME/bin:$PATH"; \
-  CONFIGURE_OPTS="--disable-install-doc --enable-yjit" ruby-build ${RUBY_VERSION} /usr/local; \
-  # Cleanup build dependencies
-  rm -rf /tmp/rust; \
-  rm -rf /usr/local/bin/ruby-build; \
-  rm -rf /var/lib/apt/lists/*; \
-  apt-mark auto '.*' > /dev/null; \
-  apt-mark manual $savedAptMark > /dev/null; \
-  find /usr/local -type f -executable -not \( -name '*tkinter*' \) -exec ldd '{}' ';' \
-    | awk '/=>/ { so = $(NF-1); if (index(so, "/usr/local/") == 1) { next }; gsub("^/(usr/)?", "", so); printf "*%s\n", so }' \
-    | sort -u \
-    | xargs -r dpkg-query --search \
-    | cut -d: -f1 \
-    | sort -u \
-    | xargs -r apt-mark manual \
-    ; \
-  apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+  CONFIGURE_OPTS="--disable-install-doc --enable-yjit" ruby-build ${RUBY_VERSION} /usr/local;
+
+FROM ruby_base AS image
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /usr/local/lib /usr/local/lib
+RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
   # verify we have no "ruby" packages installed
   if dpkg -l | grep -i ruby; then exit 1; fi; \
   [ "$(command -v ruby)" = '/usr/local/bin/ruby' ]; \
