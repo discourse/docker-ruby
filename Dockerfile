@@ -12,7 +12,10 @@ ARG RUBY_VERSION
 ENV RUBY_VERSION=${RUBY_VERSION}
 
 # Installs system dependencies required to run Ruby
-RUN set -eux; \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/cache/debconf,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
     bzip2 \
