@@ -98,8 +98,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   # Disable system libffi for `ffi` gem because it currently doesn't work with Debian Bookworm's FFI
   # See https://github.com/ffi/ffi/issues/1036
   bundle config build.ffi --disable-system-libffi; \
-  # We don't use typeprof or rbs at all so uninstall it as it takes up about 12mbs
-  gem uninstall --all typeprof rbs; \
   # rough smoke test
   ruby --version; \
   gem --version; \
