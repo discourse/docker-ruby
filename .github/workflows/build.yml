@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby_version: [3.4.4, 3.3.8, 3.2.8]
+        ruby_version: [3.4.5, 3.3.9, 3.2.9]
         debian_release: [trixie, bookworm]
     timeout-minutes: 360
     steps:
