@@ -95,6 +95,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   # verify we have no "ruby" packages installed
   if dpkg -l | grep -i ruby; then exit 1; fi; \
   [ "$(command -v ruby)" = '/usr/local/bin/ruby' ]; \
+  # Install latest bundler in addition to the one that comes with ruby
+  gem install bundler -v 4.0.11; \
   # Disable system libffi for `ffi` gem because it currently doesn't work with Debian Bookworm's FFI
   # See https://github.com/ffi/ffi/issues/1036
   bundle config build.ffi --disable-system-libffi; \
