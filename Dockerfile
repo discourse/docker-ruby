@@ -103,4 +103,5 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   # rough smoke test
   ruby --version; \
   gem --version; \
-  bundle --version
+  bundle --version; \
+  gem list bundler | grep -q "default:"; 
