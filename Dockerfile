@@ -1,7 +1,5 @@
-# Build:
-#   docker build -t discourse/ruby:3.3-bookworm-slim --build-arg DEBIAN_RELEASE=bookworm --build-arg RUBY_VERSION=3.3.3 .
-#
 # You are not expected to build and push this Docker image by hand. This is done by the `build` Github Actions workflow.
+#
 ARG DEBIAN_RELEASE=
 ARG RUBY_VERSION=
 
