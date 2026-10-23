@@ -9,8 +9,6 @@ ARG RUBY_VERSION
 
 ENV RUBY_VERSION=${RUBY_VERSION}
 
-COPY patches/ /tmp/ruby-patches/
-
 # Installs system dependencies required to run Ruby
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/cache/debconf,sharing=locked \
@@ -76,15 +74,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   cd / && rm -fr /src; \
   export RUSTUP_HOME='/tmp/rust/rustup' CARGO_HOME='/tmp/rust/cargo';\
   export PATH="$CARGO_HOME/bin:$PATH"; \
-  # Backport ruby/ruby#16801 to the 3.4 release line
-  case "${RUBY_VERSION}" in \
-    3.4.*) CONFIGURE_OPTS="--disable-install-doc --enable-yjit" ruby-build --patch ${RUBY_VERSION} /usr/local < /tmp/ruby-patches/ruby-16801.patch ;; \
-    *) CONFIGURE_OPTS="--disable-install-doc --enable-yjit" ruby-build ${RUBY_VERSION} /usr/local ;; \
-  esac; \
+  CONFIGURE_OPTS="--disable-install-doc --enable-yjit" ruby-build ${RUBY_VERSION} /usr/local; \
   # Cleanup build dependencies
   rm -rf /tmp/rust; \
   rm -rf /usr/local/bin/ruby-build; \
-  rm -rf /tmp/ruby-patches; \
   rm -rf /var/lib/apt/lists/*; \
   apt-mark auto '.*' > /dev/null; \
   apt-mark manual $savedAptMark > /dev/null; \
@@ -101,7 +94,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   if dpkg -l | grep -i ruby; then exit 1; fi; \
   [ "$(command -v ruby)" = '/usr/local/bin/ruby' ]; \
   # Install latest bundler in addition to the one that comes with ruby
-  gem install bundler -v 4.0.11; \
+  gem install bundler -v 4.0.23; \
   # Disable system libffi for `ffi` gem because it currently doesn't work with Debian Bookworm's FFI
   # See https://github.com/ffi/ffi/issues/1036
   bundle config build.ffi --disable-system-libffi; \
